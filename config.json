@@ -1,6 +1,6 @@
 {
     "bridge": {
-        "name": "Homebridge Sony Audio Control",
+        "name": "Homebridge Systemair Modbus",
         "username": "CC:22:3D:E3:CE:33",
         "port": 51823,
         "pin": "031-45-154"
@@ -8,7 +8,7 @@
     "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
     "accessories": [
         {
-            "accessory": "systemairModbus",
+            "accessory": "SystemairModbus",
             "name": "Systemair Ventilation",
             "host": "10.0.0.153",
             "port": 8234,
