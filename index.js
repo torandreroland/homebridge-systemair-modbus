@@ -4,7 +4,7 @@ var ModbusRTU = require("modbus-serial");
 module.exports = function(homebridge){
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
-  homebridge.registerAccessory("homebridge-modbus-thermostat", "Modbus Thermostat", Thermostat);
+  homebridge.registerAccessory("homebridge-modbus-thermostat", "systemairModbus", Thermostat);
 };
 
 function Thermostat(log, config) {
