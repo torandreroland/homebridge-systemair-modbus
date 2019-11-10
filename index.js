@@ -1,7 +1,5 @@
 var Service, Characteristic;
-var request = require("request");
-var Modbus = require("jsmodbus");
-var net = require("net");
+var ModbusRTU = require("modbus-serial");
 
 module.exports = function(homebridge){
   Service = homebridge.hap.Service;
@@ -17,11 +15,9 @@ function Thermostat(log, config) {
   this.model = config.model || 'VTR300';
   this.serial = config.serial || 'SN1';
 
-  this.apiroute = config.apiroute
-  this.username = config.username || null;
-	this.password = config.password || null;
-  this.timeout = config.timeout || 5000;
-  this.http_method = config.http_method || 'GET';
+  this.host = config.host ||  "10.0.0.153";
+  this.port = config.port || 8234;
+  this.slave = config.slave || 10;
 
   this.temperatureDisplayUnits = config.temperatureDisplayUnits || 0;
 	this.maxTemp = config.maxTemp || 11;
@@ -30,16 +26,12 @@ function Thermostat(log, config) {
   this.targetTemperature = 20;
 	this.currentTemperature = 20;
   this.targetHeatingCoolingState = 1;
-	this.heatingCoolingState = 1;
+  this.heatingCoolingState = 1;
+  this.heatingCoolingValidValues = [1];
 
-  if(this.username != null && this.password != null){
-    this.auth = {
-      user : this.username,
-      pass : this.password
-    };
-  }
-
-  this.log(this.name, this.apiroute);
+  var client = new ModbusRTU();
+  client.connectTCP(this.host, { port: this.port });
+  client.setID(this.slave);
 
 	this.service = new Service.Thermostat(this.name);
 }
@@ -51,111 +43,41 @@ Thermostat.prototype = {
 		callback();
 	},
 
-  _httpRequest: function (url, body, method, callback) {
-      request({
-          url: url,
-          body: body,
-          method: this.http_method,
-          timeout: this.timeout,
-          rejectUnauthorized: false,
-          auth: this.auth
-      },
-          function (error, response, body) {
-              callback(error, response, body);
-          });
-  },
-
 	getCurrentHeatingCoolingState: function(callback) {
-    this.log("[+] getCurrentHeatingCoolingState from:", this.apiroute+"/status");
-    var url = this.apiroute+"/status";
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error getting currentHeatingCoolingState: %s", error.message);
-  				callback(error);
-        } else {
-          var json = JSON.parse(responseBody);
-          this.log("[*] currentHeatingCoolingState: %s", json.currentHeatingCoolingState);
-          this.currentHeatingCoolingState = json.currentHeatingCoolingState;
-          callback(null, this.currentHeatingCoolingState);
-        }
-    }.bind(this));
+    this.currentHeatingCoolingState = client.readHoldingRegisters(351, 1);
+    this.log("currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
+    callback(null, this.currentHeatingCoolingState);
   },
   
   getTargetHeatingCoolingState: function(callback) {
-    this.log("[+] getTargerHeatingCoolingState from:", this.apiroute+"/status");
-    var url = this.apiroute+"/status";
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error getting targetHeatingCoolingState: %s", error.message);
-  				callback(error);
-        } else {
-          var json = JSON.parse(responseBody);
-          this.log("[*] targetHeatingCoolingState: %s", json.targetHeatingCoolingState);
-          this.targetHeatingCoolingState = json.targetHeatingCoolingState;
-          callback(null, this.targetHeatingCoolingState);
-        }
-    }.bind(this));
+		this.log("getTargetHeatingCoolingState: %s", this.targetHeatingCoolingState);
+		callback(null, this.targetHeatingCoolingState);
   },
 
   setTargetHeatingCoolingState: function(value, callback) {
-    this.log("[+] setTargetHeatingCoolingState from %s to %s", this.targetHeatingCoolingState, value);
-    url = this.apiroute + '/targetHeatingCoolingState/' + value;
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error setting targetHeatingCoolingState: %s", error.message);
-					callback(error);
-        } else {
-          this.log("[*] Sucessfully set targetHeatingCoolingState to %s", value);
-          this.service.setCharacteristic(Characteristic.CurrentHeatingCoolingState, value);
-          callback();
-        }
-    }.bind(this));
+		this.log("setTargetHeatingCoolingState from %s to %s", this.targetHeatingCoolingState, value);
+		this.targetHeatingCoolingState = value;
+		callback();
   },
 
   getCurrentTemperature: function(callback) {
-    this.log("[+] getCurrentTemperature from:", this.apiroute+"/status");
-    var url = this.apiroute+"/status";
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error getting currentTemperature: %s", error.message);
-  				callback(error);
-        } else {
-  				var json = JSON.parse(responseBody);
-          this.currentTemperature = parseFloat(json.currentTemperature);
-          this.log("[*] currentTemperature: %s", json.currentTemperature);
-  				callback(null, this.currentTemperature);
-        }
-    }.bind(this));
+    this.currentTemperature = client.readHoldingRegisters(213, 1) / 10;
+    this.log("currentTemperature: %s", this.currentTemperature);
+    callback(null, this.currentTemperature);
   },
 
   getTargetTemperature: function(callback) {
-    this.log("[+] getTargetTemperature from:", this.apiroute+"/status");
-    var url = this.apiroute+"/status";
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error getting targetTemperature: %s", error.message);
-  				callback(error);
-        } else {
-  				var json = JSON.parse(responseBody);
-  				this.targetTemperature = parseFloat(json.targetTemperature);
-  				this.log("[*] targetTemperature: %s", this.targetTemperature);
-  				callback(null, this.targetTemperature);
-        }
-    }.bind(this));
+    this.targetTemperature = client.readHoldingRegisters(207, 1) / 10;
+    this.log("targetTemperature: %s", this.targetTemperature);
+    callback(null, this.targetTemperature);
   },
 
   setTargetTemperature: function(value, callback) {
-    this.log("[+] setTargetTemperature from %s to %s", this.targetTemperature, value);
-    var url = this.apiroute+"/targetTemperature/"+value;
-    this._httpRequest(url, '', 'GET', function (error, response, responseBody) {
-        if (error) {
-          this.log("[!] Error setting targetTemperature", error.message);
-  				callback(error);
-        } else {
-          this.log("[*] Sucessfully set targetTemperature to %s", value);
-  				callback();
-        }
-    }.bind(this));
+    let setPoint = value - 11;
+    client.writeRegisters(206, [setPoint]);
+    this.targetTemperature = value;
+    this.log("targetTemperature: %s", this.value);
+    callback(null, this.targetTemperature);
   },
 
 	getTemperatureDisplayUnits: function(callback) {
@@ -167,7 +89,8 @@ Thermostat.prototype = {
 		this.log("[*] setTemperatureDisplayUnits from %s to %s", this.temperatureDisplayUnits, value);
 		this.temperatureDisplayUnits = value;
 		callback();
-	},
+  },
+  
 
 	getName: function(callback) {
 		this.log("getName :", this.name);
@@ -188,6 +111,7 @@ Thermostat.prototype = {
 
 		this.service
 			.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+      .setProps({ this.heatingCoolingValidValues })
 			.on('get', this.getTargetHeatingCoolingState.bind(this))
 			.on('set', this.setTargetHeatingCoolingState.bind(this));
 
