@@ -4,10 +4,10 @@ var ModbusRTU = require("modbus-serial");
 module.exports = function (homebridge) {
 	Service = homebridge.hap.Service;
 	Characteristic = homebridge.hap.Characteristic;
-	homebridge.registerAccessory("homebridge-systemair-modbus", "systemairModbus", Thermostat);
+	homebridge.registerAccessory("homebridge-systemair-modbus", "systemairModbus", Ventilation);
 };
 
-function Thermostat(log, config) {
+function Ventilation(log, config) {
 	this.log = log;
 
 	this.name = config.name;
@@ -18,25 +18,18 @@ function Thermostat(log, config) {
 	this.host = config.host || "10.0.0.153";
 	this.port = config.port || 8234;
 	this.slave = config.slave || 10;
-
 	this.temperatureDisplayUnits = config.temperatureDisplayUnits || 0;
-	this.maxTemp = 11;
-	this.minTemp = 22;
-	this.minStep = 1;
+
 	this.targetTemperature = 20;
 	this.currentTemperature = 20;
 	this.targetHeatingCoolingState = 1;
-	this.heatingCoolingState = 1;
-	this.heatingCoolingValidValues = [1];
 
-	var client = new ModbusRTU();
-	client.connectTCP(this.host, { port: this.port });
-	client.setID(this.slave);
-
-	this.service = new Service.Thermostat(this.name);
+	this.client = new ModbusRTU();
+	this.client.connectTCP(this.host, { port: this.port });
+	this.client.setID(this.slave);
 }
 
-Thermostat.prototype = {
+Ventilation.prototype = {
 
 	identify: function (callback) {
 		this.log("Identify requested!");
@@ -44,40 +37,61 @@ Thermostat.prototype = {
 	},
 
 	getCurrentHeatingCoolingState: function (callback) {
-		this.currentHeatingCoolingState = client.readHoldingRegisters(351, 1);
-		this.log("currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
+		this.client.readHoldingRegisters(351, 1)
+			.then(function (d) {
+				console.log("Receive:", d.data);
+				this.currentHeatingCoolingState = d.data[0];
+			})
+			.catch(function (e) {
+				console.log(e.message);
+			})
+		this.log("Get currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
 		callback(null, this.currentHeatingCoolingState);
 	},
 
 	getTargetHeatingCoolingState: function (callback) {
-		this.log("getTargetHeatingCoolingState: %s", this.targetHeatingCoolingState);
+		this.log("Get targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
 		callback(null, this.targetHeatingCoolingState);
 	},
 
 	setTargetHeatingCoolingState: function (value, callback) {
-		this.log("setTargetHeatingCoolingState from %s to %s", this.targetHeatingCoolingState, value);
+		this.log("Set targetHeatingCoolingState from %s to %s", this.targetHeatingCoolingState, value);
 		this.targetHeatingCoolingState = value;
 		callback();
 	},
 
 	getCurrentTemperature: function (callback) {
-		this.currentTemperature = client.readHoldingRegisters(213, 1) / 10;
-		this.log("currentTemperature: %s", this.currentTemperature);
+		this.client.readHoldingRegisters(213, 1)
+			.then(function (d) {
+				console.log("Receive:", d.data);
+				this.currentTemperature = (d.data[0]) / 10;
+			})
+			.catch(function (e) {
+				console.log(e.message);
+			})
+		this.log("Get currentTemperature: %s", this.currentTemperature)
 		callback(null, this.currentTemperature);
 	},
 
 	getTargetTemperature: function (callback) {
-		this.targetTemperature = client.readHoldingRegisters(207, 1) / 10;
-		this.log("targetTemperature: %s", this.targetTemperature);
+		this.client.readHoldingRegisters(207, 1)
+			.then(function (d) {
+				console.log("Receive:", d.data);
+				this.targetTemperature = (d.data[0]) / 10;
+			})
+			.catch(function (e) {
+				console.log(e.message);
+			})
+		this.log("Get targetTemperature: %s", this.targetTemperature)
 		callback(null, this.targetTemperature);
 	},
 
 	setTargetTemperature: function (value, callback) {
 		let setPoint = value - 11;
-		client.writeRegisters(206, [setPoint]);
+		this.client.writeRegisters(206, [setPoint]);
 		this.targetTemperature = value;
-		this.log("targetTemperature: %s", this.value);
-		callback(null, this.targetTemperature);
+		this.log("Set targetTemperature: %s", value);
+		callback();
 	},
 
 	getTemperatureDisplayUnits: function (callback) {
@@ -104,6 +118,7 @@ Thermostat.prototype = {
 			.setCharacteristic(Characteristic.Model, this.model)
 			.setCharacteristic(Characteristic.SerialNumber, this.serial);
 
+		this.service = new Service.Thermostat(this.name);
 		this.service
 			.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 			.on('get', this.getCurrentHeatingCoolingState.bind(this));
@@ -131,21 +146,16 @@ Thermostat.prototype = {
 			.getCharacteristic(Characteristic.Name)
 			.on('get', this.getName.bind(this));
 
-		this.service.getCharacteristic(Characteristic.CurrentTemperature)
-			.setProps({
-				minStep: this.minStep
-			});
-
 		this.service.getCharacteristic(Characteristic.TargetTemperature)
 			.setProps({
-				minValue: this.minTemp,
-				maxValue: this.maxTemp,
-				minStep: this.minStep
+				minValue: 11,
+				maxValue: 22,
+				minStep: 1
 			});
-		
+
 		this.service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 			.setProps({
-				validValues: this.heatingCoolingValidValues
+				validValues: [1]
 			});
 
 		return [this.informationService, this.service];
