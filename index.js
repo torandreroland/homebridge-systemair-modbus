@@ -111,7 +111,6 @@ Thermostat.prototype = {
 
 		this.service
 			.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-      .setProps({ this.heatingCoolingValidValues })
 			.on('get', this.getTargetHeatingCoolingState.bind(this))
 			.on('set', this.setTargetHeatingCoolingState.bind(this));
 

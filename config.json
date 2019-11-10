@@ -8,7 +8,7 @@
     "description": "This is an example configuration file with one fake accessory and one fake platform. You can use this as a template for creating your own configuration file containing devices you actually own.",
     "accessories": [
         {
-            "accessory": "SystemairModbus",
+            "accessory": "systemairModbus",
             "name": "Systemair Ventilation",
             "host": "10.0.0.153",
             "port": 8234,
