@@ -38,15 +38,12 @@ Ventilation.prototype = {
 
 	getCurrentHeatingCoolingState: function (callback) {
 		this.client.readHoldingRegisters(351, 1)
-			.then(function (d) {
-				console.log("Receive:", d.data);
-				this.currentHeatingCoolingState = d.data[0];
+			.then((response) => {
+				this.currentHeatingCoolingState = response.data[0];
+				this.log("Get currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
+				callback(null, this.currentHeatingCoolingState)
 			})
-			.catch(function (e) {
-				console.log(e.message);
-			})
-		this.log("Get currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
-		callback(null, this.currentHeatingCoolingState);
+			.catch(callback);
 	},
 
 	getTargetHeatingCoolingState: function (callback) {
@@ -62,28 +59,22 @@ Ventilation.prototype = {
 
 	getCurrentTemperature: function (callback) {
 		this.client.readHoldingRegisters(213, 1)
-			.then(function (d) {
-				console.log("Receive:", d.data);
-				this.currentTemperature = (d.data[0]) / 10;
-			})
-			.catch(function (e) {
-				console.log(e.message);
-			})
-		this.log("Get currentTemperature: %s", this.currentTemperature)
-		callback(null, this.currentTemperature);
+		.then((response) => {
+			this.currentTemperature = response.data[0] / 10;
+			this.log("Get currentTemperature: %s", this.currentTemperature);
+			callback(null, this.currentTemperature)
+		})
+		.catch(callback);
 	},
 
 	getTargetTemperature: function (callback) {
 		this.client.readHoldingRegisters(207, 1)
-			.then(function (d) {
-				console.log("Receive:", d.data);
-				this.targetTemperature = (d.data[0]) / 10;
-			})
-			.catch(function (e) {
-				console.log(e.message);
-			})
-		this.log("Get targetTemperature: %s", this.targetTemperature)
-		callback(null, this.targetTemperature);
+		.then((response) => {
+			this.targetTemperature = response.data[0] / 10;
+			this.log("Get targetTemperature: %s", this.targetTemperature);
+			callback(null, this.targetTemperature)
+		})
+		.catch(callback);
 	},
 
 	setTargetTemperature: function (value, callback) {
