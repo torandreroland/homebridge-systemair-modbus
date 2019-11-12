@@ -20,7 +20,8 @@ function Ventilation(log, config) {
 	this.slave = config.slave || 10;
 	this.temperatureDisplayUnits = config.temperatureDisplayUnits || 0;
 
-	
+	this.filterChangeIndication = 0;
+
 	this.active = 1;
 	this.fanLevel = 2;
 	this.fanSpeed = 67;
@@ -41,10 +42,30 @@ Ventilation.prototype = {
 		callback();
 	},
 
+	getFilterChangeIndication: function (callback) {
+		this.client.readHoldingRegisters(600, 1)
+		.then((responseMonths) => {
+			this.replacementTimeMonths = responseMonths.data[0];
+			this.client.readHoldingRegisters(601, 1)
+			.then((responseDays) => {
+
+				if (responseDays.data[0] > this.replacementTimeMonths * 30) {
+					this.filterChangeIndication  = 1
+				} else {
+					this.filterChangeIndication = 0
+				}
+
+				this.log("Get filterChangeIndication: %s based on number of days passed: %s", this.filterChangeIndication, responseDays.data[0]);
+				callback(null, this.filterChangeIndication)
+			})
+			.catch(callback)
+		})
+		.catch(callback);
+	},
+
 	getActive: function (callback) {
 		this.client.readHoldingRegisters(100, 1)
 		.then((response) => {
-			this.log("Raw active: %s", response.data[0]);
 
 			if (response.data[0] == 0) {
 				this.active = 0
@@ -59,6 +80,7 @@ Ventilation.prototype = {
 	},
 
 	setActive: function (value, callback) {
+
 		if (value == 1) {
 			this.client.writeRegisters(100, [this.fanLevel]);
 			this.log("Set active: %s and fanLevel: %s", value, this.fanLevel);
@@ -66,13 +88,13 @@ Ventilation.prototype = {
 			this.client.writeRegisters(100, [value]);
 			this.log("Set active: %s", value);
 		}
+
 		callback();
 	},
 
 	getRotationSpeed: function (callback) {
 		this.client.readHoldingRegisters(100, 1)
 		.then((response) => {
-			this.log("Raw rotationSpeed: %s", response.data[0]);
 
 			switch(true) {
 				case (response.data[0] == 0):
@@ -190,6 +212,11 @@ Ventilation.prototype = {
 			.setCharacteristic(Characteristic.Model, this.model)
 			.setCharacteristic(Characteristic.SerialNumber, this.serial);
 
+		this.filterMaintenanceService = new Service.FilterMaintenance(this.name);
+		this.filterMaintenanceService
+			.getCharacteristic(Characteristic.FilterChangeIndication)
+			.on('get', this.getFilterChangeIndication.bind(this));
+
 		this.fanService = new Service.Fan(this.name);
         this.fanService
             .getCharacteristic(Characteristic.Active)
@@ -233,6 +260,6 @@ Ventilation.prototype = {
 				validValues: [1]
 			});
 
-		return [this.informationService, this.fanService, this.ThermostatService];
+		return [this.informationService, this.filterMaintenanceService, this.fanService, this.ThermostatService];
 	}
 };

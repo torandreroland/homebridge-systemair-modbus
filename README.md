@@ -4,6 +4,7 @@ an implementation for a Systemair Villavent VTR300 unit and exposes the followin
 
 - Thermostat
 - Fan
+- Filter Maintenance
 
 ## Installation
 
