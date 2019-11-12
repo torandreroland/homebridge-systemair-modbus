@@ -20,6 +20,11 @@ function Ventilation(log, config) {
 	this.slave = config.slave || 10;
 	this.temperatureDisplayUnits = config.temperatureDisplayUnits || 0;
 
+	
+	this.active = 1;
+	this.fanLevel = 2;
+	this.fanSpeed = 67;
+
 	this.targetTemperature = 20;
 	this.currentTemperature = 20;
 	this.targetHeatingCoolingState = 1;
@@ -33,6 +38,82 @@ Ventilation.prototype = {
 
 	identify: function (callback) {
 		this.log("Identify requested!");
+		callback();
+	},
+
+	getActive: function (callback) {
+		this.client.readHoldingRegisters(100, 1)
+		.then((response) => {
+			this.log("Raw active: %s", response.data[0]);
+
+			if (response.data[0] == 0) {
+				this.active = 0
+			} else {
+				this.active = 1
+			}
+
+			this.log("Get active: %s", this.active);
+			callback(null, this.active)
+		})
+		.catch(callback);
+	},
+
+	setActive: function (value, callback) {
+		if (value == 1) {
+			this.client.writeRegisters(100, [this.fanLevel]);
+			this.log("Set active: %s and fanLevel: %s", value, this.fanLevel);
+		} else {
+			this.client.writeRegisters(100, [value]);
+			this.log("Set active: %s", value);
+		}
+		callback();
+	},
+
+	getRotationSpeed: function (callback) {
+		this.client.readHoldingRegisters(100, 1)
+		.then((response) => {
+			this.log("Raw rotationSpeed: %s", response.data[0]);
+
+			switch(true) {
+				case (response.data[0] == 0):
+					this.fanSpeed = 0;
+					break;
+				case (response.data[0] == 1):
+					this.fanSpeed = 33;
+					break;
+				case (response.data[0] == 2):
+					this.fanSpeed = 67;
+					break;
+				default:
+					this.fanSpeed = 100;
+					break;
+			}
+
+			this.log("Get rotationSpeed: %s", this.fanSpeed);
+			callback(null, this.fanSpeed)
+		})
+		.catch(callback);
+	},
+
+	setRotationSpeed: function (value, callback) {
+
+		switch(true) {
+			case (value == 0):
+				this.fanLevel = 0;
+				break;
+			case (value < 34):
+				this.fanLevel = 1;
+				break;
+			case (value < 68):
+				this.fanLevel = 2;
+				break;
+			default:
+				this.fanLevel = 3;
+				break;
+		}
+
+		this.client.writeRegisters(100, [this.fanLevel]);
+		this.log("Set RotationSpeed: %s", value);
 		callback();
 	},
 
@@ -109,46 +190,49 @@ Ventilation.prototype = {
 			.setCharacteristic(Characteristic.Model, this.model)
 			.setCharacteristic(Characteristic.SerialNumber, this.serial);
 
-		this.service = new Service.Thermostat(this.name);
-		this.service
+		this.fanService = new Service.Fan(this.name);
+        this.fanService
+            .getCharacteristic(Characteristic.Active)
+            .on('get', this.getActive.bind(this))
+            .on('set', this.setActive.bind(this));
+        this.fanService
+            .addCharacteristic(Characteristic.RotationSpeed)
+            .on('get', this.getRotationSpeed.bind(this))
+            .on('set', this.setRotationSpeed.bind(this));
+
+		this.ThermostatService = new Service.Thermostat(this.name);
+		this.ThermostatService
 			.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 			.on('get', this.getCurrentHeatingCoolingState.bind(this));
-
-		this.service
+		this.ThermostatService
 			.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 			.on('get', this.getTargetHeatingCoolingState.bind(this))
 			.on('set', this.setTargetHeatingCoolingState.bind(this));
-
-		this.service
+		this.ThermostatService
 			.getCharacteristic(Characteristic.CurrentTemperature)
 			.on('get', this.getCurrentTemperature.bind(this));
-
-		this.service
+		this.ThermostatService
 			.getCharacteristic(Characteristic.TargetTemperature)
 			.on('get', this.getTargetTemperature.bind(this))
 			.on('set', this.setTargetTemperature.bind(this));
-
-		this.service
+		this.ThermostatService
 			.getCharacteristic(Characteristic.TemperatureDisplayUnits)
 			.on('get', this.getTemperatureDisplayUnits.bind(this))
 			.on('set', this.setTemperatureDisplayUnits.bind(this));
-
-		this.service
+		this.ThermostatService
 			.getCharacteristic(Characteristic.Name)
 			.on('get', this.getName.bind(this));
-
-		this.service.getCharacteristic(Characteristic.TargetTemperature)
+		this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature)
 			.setProps({
 				minValue: 11,
 				maxValue: 22,
 				minStep: 1
 			});
-
-		this.service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+		this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 			.setProps({
 				validValues: [1]
 			});
 
-		return [this.informationService, this.service];
+		return [this.informationService, this.fanService, this.ThermostatService];
 	}
 };

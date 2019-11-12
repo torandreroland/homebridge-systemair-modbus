@@ -3,6 +3,7 @@ This is a plugin for [Homebridge](https://github.com/nfarina/homebridge). It's
 an implementation for a Systemair Villavent VTR300 unit and exposes the following services:
 
 - Thermostat
+- Fan
 
 ## Installation
 
