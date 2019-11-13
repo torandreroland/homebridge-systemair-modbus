@@ -10,7 +10,7 @@ implements a Systemair Villavent VTR300 unit connected via Modbus TCP as a HomeK
 
 1. Install [homebridge](https://github.com/nfarina/homebridge#installation-details)
 2. Install this plugin: `npm install -g homebridge-systemair-modbus`
-3. Update your `config.json` file (See below).
+3. Update your `config.json` file (See below). PollInterval is in seconds, omit to disable.
 
 ## Configuration example
 
@@ -21,7 +21,8 @@ implements a Systemair Villavent VTR300 unit connected via Modbus TCP as a HomeK
     "name": "Systemair Ventilation",
     "host": "10.0.0.153",
     "port": 8234,
-    "slave": 10
+    "slave": 10,
+    "pollInterval": 5
   }
 ]
 ```
