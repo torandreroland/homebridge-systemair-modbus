@@ -27,6 +27,7 @@ function Ventilation(log, config) {
 	this.fanSpeed = 67;
 
 	this.targetTemperature = 20;
+	this.setPoint = this.targetTemperature - 11;
 	this.currentTemperature = 20;
 	this.targetHeatingCoolingState = 1;
 
@@ -63,7 +64,7 @@ Ventilation.prototype = {
 		.catch(callback);
 	},
 
-	getActive: function (callback) {
+	getFanActive: function (callback) {
 		this.client.readHoldingRegisters(100, 1)
 		.then((response) => {
 
@@ -79,7 +80,7 @@ Ventilation.prototype = {
 		.catch(callback);
 	},
 
-	setActive: function (value, callback) {
+	setFanActive: function (value, callback) {
 
 		if (value == 1) {
 			this.client.writeRegisters(100, [this.fanLevel]);
@@ -92,7 +93,7 @@ Ventilation.prototype = {
 		callback();
 	},
 
-	getRotationSpeed: function (callback) {
+	getFanRotationSpeed: function (callback) {
 		this.client.readHoldingRegisters(100, 1)
 		.then((response) => {
 
@@ -117,7 +118,7 @@ Ventilation.prototype = {
 		.catch(callback);
 	},
 
-	setRotationSpeed: function (value, callback) {
+	setFanRotationSpeed: function (value, callback) {
 
 		switch(true) {
 			case (value == 0):
@@ -150,13 +151,27 @@ Ventilation.prototype = {
 	},
 
 	getTargetHeatingCoolingState: function (callback) {
-		this.log("Get targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
-		callback(null, this.targetHeatingCoolingState);
+		this.client.readHoldingRegisters(206, 1)
+		.then((response) => {
+			if (response.data[0] == 0) {
+				this.targetHeatingCoolingState = 0
+			} else {
+				this.targetHeatingCoolingState = 1
+			}
+			this.log("Get targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
+			callback(null, this.targetHeatingCoolingState)
+		})
+		.catch(callback);
 	},
 
 	setTargetHeatingCoolingState: function (value, callback) {
-		this.log("Set targetHeatingCoolingState from %s to %s", this.targetHeatingCoolingState, value);
+		if (value == 0) {
+			this.client.writeRegisters(206, [value]);
+		} else {
+			this.client.writeRegisters(206, [this.setPoint]);
+		}
 		this.targetHeatingCoolingState = value;
+		this.log("Set targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
 		callback();
 	},
 
@@ -181,8 +196,8 @@ Ventilation.prototype = {
 	},
 
 	setTargetTemperature: function (value, callback) {
-		let setPoint = value - 11;
-		this.client.writeRegisters(206, [setPoint]);
+		this.setPoint = value - 11;
+		this.client.writeRegisters(206, [this.setPoint]);
 		this.targetTemperature = value;
 		this.log("Set targetTemperature: %s", value);
 		callback();
@@ -220,12 +235,12 @@ Ventilation.prototype = {
 		this.fanService = new Service.Fan(this.name);
         this.fanService
             .getCharacteristic(Characteristic.Active)
-            .on('get', this.getActive.bind(this))
-            .on('set', this.setActive.bind(this));
+            .on('get', this.getFanActive.bind(this))
+            .on('set', this.setFanActive.bind(this));
         this.fanService
             .addCharacteristic(Characteristic.RotationSpeed)
-            .on('get', this.getRotationSpeed.bind(this))
-            .on('set', this.setRotationSpeed.bind(this));
+            .on('get', this.getFanRotationSpeed.bind(this))
+            .on('set', this.setFanRotationSpeed.bind(this));
 
 		this.ThermostatService = new Service.Thermostat(this.name);
 		this.ThermostatService
@@ -257,7 +272,7 @@ Ventilation.prototype = {
 			});
 		this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 			.setProps({
-				validValues: [1]
+				validValues: [0,1]
 			});
 
 		return [this.informationService, this.filterMaintenanceService, this.fanService, this.ThermostatService];
