@@ -12,15 +12,26 @@ function Ventilation(log, config) {
   this.log = log;
 
   this.name = config.name;
-  this.manufacturer = config.manufacturer || 'Systemair';
-  this.model = config.model || 'VTR300';
-  this.serial = config.serial || 'SN1';
+  this.manufacturer = config.manufacturer || "Systemair";
+  this.model = config.model || "VTR300";
+  this.serial = config.serial || "SN1";
   this.pollInterval = config.pollInterval
 
-  this.host = config.host || "10.0.0.153";
-  this.port = config.port || 8234;
-  this.slave = config.slave || 10;
+  this.host = config.host;
+  this.port = config.port;
+  this.slave = config.slave;
   this.temperatureDisplayUnits = config.temperatureDisplayUnits || 0;
+
+  this.replacementTimeInMonthsRegister = config.replacementTimeInMonthsRegister || 600;
+  this.elapsedDaysSinceFilterChangeRegister = config.elapsedDaysSinceFilterChangeRegister || 601;
+  this.fanSpeedLevelRegister = config.fanSpeedLevelRegister || 100;
+  this.rotorRelayActiveRegister = config.rotorRelayActiveRegister || 351;
+  this.temperatureSetPointLevelRegister = config.temperatureSetPointLevelRegister || 206;
+  this.temperatureSetPointRegister = config.temperatureSetPointRegister || 207;
+  this.supplyAirTemperatureRegister = config.supplyAirTemperatureRegister || 213;
+  this.temperatureScaling = config.temperatureScaling || 0.1;
+  this.targetTemperatureProperties = config.targetTemperatureProperties || {"minValue": 12, "maxValue": 22, "minStep": 1};
+  this.targetHeatingCoolingStateValidValues = {"validValues": [0, 1]};
 
   this.filterChangeIndication = 0;
 
@@ -29,7 +40,8 @@ function Ventilation(log, config) {
   this.fanSpeed = 67;
 
   this.targetTemperature = 20;
-  this.setPoint = this.targetTemperature - 11;
+  this.setPointLevelDifference = this.targetTemperatureProperties.minValue - 1;
+  this.setPoint = this.targetTemperature - this.setPointLevelDifference;
   this.currentTemperature = 20;
   this.targetHeatingCoolingState = 1;
 
@@ -50,10 +62,10 @@ Ventilation.prototype = {
   },
 
   getFilterChangeIndication: function(callback) {
-    this.client.readHoldingRegisters(600, 1)
+    this.client.readHoldingRegisters(this.replacementTimeInMonthsRegister, 1)
       .then((responseMonths) => {
         this.replacementTimeMonths = responseMonths.data[0];
-        this.client.readHoldingRegisters(601, 1)
+        this.client.readHoldingRegisters(this.elapsedDaysSinceFilterChangeRegister, 1)
           .then((responseDays) => {
 
             (responseDays.data[0] > this.replacementTimeMonths * 30) ? this.filterChangeIndication = 1 : this.filterChangeIndication = 0;
@@ -67,7 +79,7 @@ Ventilation.prototype = {
   },
 
   getFanOn: function(callback) {
-    this.client.readHoldingRegisters(100, 1)
+    this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
       .then((response) => {
 
         (response.data[0] == 0) ? this.on = false : this.on = true;
@@ -81,7 +93,7 @@ Ventilation.prototype = {
   setFanOn: function(value, callback) {
 
     const targetFanLevel = (value == true) ? this.fanLevel : 0;
-    this.client.writeRegisters(100, [targetFanLevel])
+    this.client.writeRegisters(this.fanSpeedLevelRegister, [targetFanLevel])
       .then((response) => {
         this.log("Set on: %s and fanLevel: %s", value, targetFanLevel);
         this.on = value;
@@ -91,7 +103,7 @@ Ventilation.prototype = {
   },
 
   getFanRotationSpeed: function(callback) {
-    this.client.readHoldingRegisters(100, 1)
+    this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
       .then((response) => {
 
         switch (true) {
@@ -132,7 +144,7 @@ Ventilation.prototype = {
         break;
     }
 
-    this.client.writeRegisters(100, [this.fanLevel])
+    this.client.writeRegisters(this.fanSpeedLevelRegister, [this.fanLevel])
       .then((response) => {
         this.log("Set RotationSpeed: %s as fanLevel: %s", value, this.fanLevel);
         callback();
@@ -141,7 +153,7 @@ Ventilation.prototype = {
   },
 
   getCurrentHeatingCoolingState: function(callback) {
-    this.client.readHoldingRegisters(351, 1)
+    this.client.readHoldingRegisters(this.rotorRelayActiveRegister, 1)
       .then((response) => {
         this.currentHeatingCoolingState = response.data[0];
         this.log("Get currentHeatingCoolingState: %s", this.currentHeatingCoolingState);
@@ -151,7 +163,7 @@ Ventilation.prototype = {
   },
 
   getTargetHeatingCoolingState: function(callback) {
-    this.client.readHoldingRegisters(206, 1)
+    this.client.readHoldingRegisters(this.temperatureSetPointLevelRegister, 1)
       .then((response) => {
         (response.data[0] == 0) ? this.targetHeatingCoolingState = 0 : this.targetHeatingCoolingState = 1;
         this.log("Get targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
@@ -163,7 +175,7 @@ Ventilation.prototype = {
   setTargetHeatingCoolingState: function(value, callback) {
     const targetHeatingTemperature = (value == 0) ? value : this.setPoint;
 
-    this.client.writeRegisters(206, [targetHeatingTemperature])
+    this.client.writeRegisters(this.temperatureSetPointLevelRegister, [targetHeatingTemperature])
       .then((response) => {
         this.targetHeatingCoolingState = value;
         this.log("Set targetHeatingCoolingState: %s", this.targetHeatingCoolingState);
@@ -173,9 +185,9 @@ Ventilation.prototype = {
   },
 
   getCurrentTemperature: function(callback) {
-    this.client.readHoldingRegisters(213, 1)
+    this.client.readHoldingRegisters(this.supplyAirTemperatureRegister, 1)
       .then((response) => {
-        this.currentTemperature = response.data[0] / 10;
+        this.currentTemperature = response.data[0] * this.temperatureScaling;
         this.log("Get currentTemperature: %s", this.currentTemperature);
         callback(null, this.currentTemperature)
       })
@@ -183,9 +195,9 @@ Ventilation.prototype = {
   },
 
   getTargetTemperature: function(callback) {
-    this.client.readHoldingRegisters(207, 1)
+    this.client.readHoldingRegisters(this.temperatureSetPointRegister, 1)
       .then((response) => {
-        this.targetTemperature = response.data[0] / 10;
+        this.targetTemperature = response.data[0] * this.temperatureScaling;
         this.log("Get targetTemperature: %s", this.targetTemperature);
         callback(null, this.targetTemperature)
       })
@@ -193,8 +205,8 @@ Ventilation.prototype = {
   },
 
   setTargetTemperature: function(value, callback) {
-    this.setPoint = value - 11;
-    this.client.writeRegisters(206, [this.setPoint])
+    this.setPoint = value - this.setPointLevelDifference;
+    this.client.writeRegisters(this.temperatureSetPointLevelRegister, [this.setPoint])
       .then((response) => {
         this.targetTemperature = value;
         this.log("Set targetTemperature: %s", value);
@@ -265,15 +277,9 @@ Ventilation.prototype = {
       .getCharacteristic(Characteristic.Name)
       .on('get', this.getName.bind(this));
     this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature)
-      .setProps({
-        minValue: 11,
-        maxValue: 22,
-        minStep: 1
-      });
+      .setProps(this.targetTemperatureProperties);
     this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-      .setProps({
-        validValues: [0, 1]
-      });
+      .setProps(this.targetHeatingCoolingStateValidValues);
 
     if (this.pollInterval) {
       this.pollCharacteristics.push(this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication));
