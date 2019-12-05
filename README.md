@@ -21,7 +21,7 @@ implements a Systemair Villavent VTR300 unit connected via Modbus TCP as a HomeK
     "host": "10.0.0.153", //Required. IP-address of the TCP to Modbus-interface.
     "port": 8234, //Required. Port of the TCP to Modbus-interface.
     "slave": 10, //Required. Slave address of the unit.
-    "pollInterval": 5, //Omit to disable. Polling interval in seconds. 
+    "pollInterval": 5, //Optional. Polling interval in seconds. 
     "name": "Systemair", //Optional. Name of accessory.
     "model": "VTR300", //Optional. Model of the unit.
     "serial": "SN1", //Optional. Serial Number of the unit.

@@ -15,7 +15,7 @@ function Ventilation(log, config) {
   this.manufacturer = config.manufacturer || "Systemair";
   this.model = config.model || "VTR300";
   this.serial = config.serial || "SN1";
-  this.pollInterval = config.pollInterval
+  this.pollInterval = config.pollInterval || 5;
 
   this.host = config.host;
   this.port = config.port;
@@ -30,8 +30,17 @@ function Ventilation(log, config) {
   this.temperatureSetPointRegister = config.temperatureSetPointRegister || 207;
   this.supplyAirTemperatureRegister = config.supplyAirTemperatureRegister || 213;
   this.temperatureScaling = config.temperatureScaling || 0.1;
-  this.targetTemperatureProperties = config.targetTemperatureProperties || {"minValue": 12, "maxValue": 22, "minStep": 1};
-  this.targetHeatingCoolingStateValidValues = {"validValues": [0, 1]};
+  this.targetTemperatureProperties = config.targetTemperatureProperties || {
+    "minValue": 12,
+    "maxValue": 22,
+    "minStep": 1
+  };
+  this.targetHeatingCoolingStateValidValues = {
+    "validValues": [0, 1]
+  };
+
+  this.reconnect = true;
+  this.pollCharacteristics = [];
 
   this.filterChangeIndication = 0;
 
@@ -46,13 +55,6 @@ function Ventilation(log, config) {
   this.targetHeatingCoolingState = 1;
   this.currentHeatingCoolingState = 1;
 
-  this.client = new ModbusRTU();
-  this.client.connectTCP(this.host, {
-    port: this.port
-  });
-  this.client.setID(this.slave);
-
-  this.pollCharacteristics = [];
 }
 
 Ventilation.prototype = {
@@ -72,11 +74,23 @@ Ventilation.prototype = {
               this.log("Received updated filterChangeIndication from unit. Changing from %s to %s based on number of days passed: %s", this.filterChangeIndication, respondedFilterChangeIndication, responseDays.data[0]);
             }
             this.filterChangeIndication = respondedFilterChangeIndication;
-            callback(null, this.filterChangeIndication)
+            callback(null, this.filterChangeIndication);
           })
-          .catch(callback)
+          .catch((error) => {
+            this.reconnect = (this.client.isOpen) ? false : true;
+            if (this.reconnect) {
+              this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+            }
+            callback(error);
+          })
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getFanOn: function(callback) {
@@ -89,7 +103,13 @@ Ventilation.prototype = {
         this.fanOn = respondedFanOn;
         callback(null, this.fanOn)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   setFanOn: function(value, callback) {
@@ -101,7 +121,13 @@ Ventilation.prototype = {
         this.fanOn = value;
         callback();
       })
-      .catch(callback)
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getFanRotationSpeed: function(callback) {
@@ -110,13 +136,13 @@ Ventilation.prototype = {
 
         let respondedFanSpeed;
         switch (true) {
-          case (response.data[0] == 0):
+          case ( response.data[0] == 0):
             respondedFanSpeed = 0;
             break;
-          case (response.data[0] == 1):
+          case ( response.data[0] == 1):
             respondedFanSpeed = 33;
             break;
-          case (response.data[0] == 2):
+          case ( response.data[0] == 2):
             respondedFanSpeed = 67;
             break;
           default:
@@ -130,7 +156,13 @@ Ventilation.prototype = {
         this.fanSpeed = respondedFanSpeed
         callback(null, this.fanSpeed)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   setFanRotationSpeed: function(value, callback) {
@@ -155,7 +187,13 @@ Ventilation.prototype = {
         this.log("Setting rotationSpeed %s as fanLevel %s", value, this.fanLevel);
         callback();
       })
-      .catch(callback)
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getCurrentHeatingCoolingState: function(callback) {
@@ -167,7 +205,13 @@ Ventilation.prototype = {
         this.currentHeatingCoolingState = response.data[0];
         callback(null, this.currentHeatingCoolingState)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getTargetHeatingCoolingState: function(callback) {
@@ -180,7 +224,13 @@ Ventilation.prototype = {
         this.targetHeatingCoolingState = respondedtargetHeatingCoolingState
         callback(null, this.targetHeatingCoolingState)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   setTargetHeatingCoolingState: function(value, callback) {
@@ -192,7 +242,13 @@ Ventilation.prototype = {
         this.log("Setting targetHeatingCoolingState %s", this.targetHeatingCoolingState);
         callback();
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getCurrentTemperature: function(callback) {
@@ -204,7 +260,13 @@ Ventilation.prototype = {
         this.currentTemperature = response.data[0] * this.temperatureScaling;
         callback(null, this.currentTemperature)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getTargetTemperature: function(callback) {
@@ -216,7 +278,13 @@ Ventilation.prototype = {
         this.targetTemperature = response.data[0] * this.temperatureScaling;
         callback(null, this.targetTemperature)
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   setTargetTemperature: function(value, callback) {
@@ -227,7 +295,13 @@ Ventilation.prototype = {
         this.log("Setting targetTemperature %s", value);
         callback()
       })
-      .catch(callback);
+      .catch((error) => {
+        this.reconnect = (this.client.isOpen) ? false : true;
+        if (this.reconnect) {
+          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
+        }
+        callback(error);
+      })
   },
 
   getTemperatureDisplayUnits: function(callback) {
@@ -241,6 +315,34 @@ Ventilation.prototype = {
 
   getName: function(callback) {
     callback(null, this.name);
+  },
+
+  connectClient: function() {
+    this.client = new ModbusRTU();
+
+    let connect = function() {
+      this.client.connectTCP(this.host, {
+        port: this.port
+      })
+        .then((response) => {
+          this.client.setID(this.slave);
+          this.reconnect = false;
+        })
+        .catch((error) => {
+          this.log(error);
+        })
+    };
+
+    this.client.close(connect.bind(this));
+  },
+
+  poll: function() {
+    this.pollCharacteristics.forEach((characteristic) => characteristic.getValue());
+  },
+
+  runModbus: function() {
+    this.reconnect ? this.connectClient() : this.poll();
+    setTimeout(() => this.runModbus(), this.pollInterval * 1000);
   },
 
   getServices: function() {
@@ -293,19 +395,15 @@ Ventilation.prototype = {
     this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
       .setProps(this.targetHeatingCoolingStateValidValues);
 
-    if (this.pollInterval) {
-      this.pollCharacteristics.push(this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication));
-      this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.On));
-      this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.RotationSpeed));
-      this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState));
-      this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState));
-      this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature));
-      this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature));
+    this.pollCharacteristics.push(this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication));
+    this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.On));
+    this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.RotationSpeed));
+    this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState));
+    this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState));
+    this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature));
+    this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature));
 
-      setInterval(() => {
-        this.pollCharacteristics.forEach((characteristic) => characteristic.getValue());
-      }, this.pollInterval * 1000);
-    }
+    this.runModbus();
 
     return [this.informationService, this.filterMaintenanceService, this.fanService, this.ThermostatService];
   }
