@@ -39,7 +39,7 @@ function Ventilation(log, config) {
     "validValues": [0, 1]
   };
 
-  this.reconnect = true;
+  this.connected = false;
   this.pollCharacteristics = [];
 
   this.filterChangeIndication = 0;
@@ -63,6 +63,14 @@ Ventilation.prototype = {
     callback();
   },
 
+  errorHandling: function(error, callback) {
+    this.connected = (this.client.isOpen) ? true : false;
+    if (this.connected == false) {
+      this.log("Lost connection to Modbus TCP-server, reconnecting shortly...");
+    }
+    callback(error);
+  },
+
   getFilterChangeIndication: function(callback) {
     this.client.readHoldingRegisters(this.replacementTimeInMonthsRegister, 1)
       .then((responseMonths) => {
@@ -77,20 +85,12 @@ Ventilation.prototype = {
             callback(null, this.filterChangeIndication);
           })
           .catch((error) => {
-            this.reconnect = (this.client.isOpen) ? false : true;
-            if (this.reconnect) {
-              this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-            }
-            callback(error);
+            this.errorHandling(error, callback);
           })
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getFanOn: function(callback) {
@@ -104,12 +104,8 @@ Ventilation.prototype = {
         callback(null, this.fanOn)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   setFanOn: function(value, callback) {
@@ -122,12 +118,8 @@ Ventilation.prototype = {
         callback();
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getFanRotationSpeed: function(callback) {
@@ -157,12 +149,8 @@ Ventilation.prototype = {
         callback(null, this.fanSpeed)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   setFanRotationSpeed: function(value, callback) {
@@ -188,12 +176,8 @@ Ventilation.prototype = {
         callback();
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getCurrentHeatingCoolingState: function(callback) {
@@ -206,12 +190,8 @@ Ventilation.prototype = {
         callback(null, this.currentHeatingCoolingState)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getTargetHeatingCoolingState: function(callback) {
@@ -225,12 +205,8 @@ Ventilation.prototype = {
         callback(null, this.targetHeatingCoolingState)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   setTargetHeatingCoolingState: function(value, callback) {
@@ -243,12 +219,8 @@ Ventilation.prototype = {
         callback();
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getCurrentTemperature: function(callback) {
@@ -261,12 +233,8 @@ Ventilation.prototype = {
         callback(null, this.currentTemperature)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getTargetTemperature: function(callback) {
@@ -279,12 +247,8 @@ Ventilation.prototype = {
         callback(null, this.targetTemperature)
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   setTargetTemperature: function(value, callback) {
@@ -296,12 +260,8 @@ Ventilation.prototype = {
         callback()
       })
       .catch((error) => {
-        this.reconnect = (this.client.isOpen) ? false : true;
-        if (this.reconnect) {
-          this.log("Lost connection to ModbusTCP, reconnecting shortly...");
-        }
-        callback(error);
-      })
+            this.errorHandling(error, callback);
+          })
   },
 
   getTemperatureDisplayUnits: function(callback) {
@@ -326,7 +286,8 @@ Ventilation.prototype = {
       })
         .then((response) => {
           this.client.setID(this.slave);
-          this.reconnect = false;
+          this.connected = true;
+          this.log("Connected to Modbus TCP-server");
         })
         .catch((error) => {
           this.log(error);
@@ -341,7 +302,7 @@ Ventilation.prototype = {
   },
 
   runModbus: function() {
-    this.reconnect ? this.connectClient() : this.poll();
+    this.connected ? this.poll() : this.connectClient();
     setTimeout(() => this.runModbus(), this.pollInterval * 1000);
   },
 
