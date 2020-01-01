@@ -29,7 +29,7 @@ function Ventilation(log, config) {
   this.temperatureSetPointLevelRegister = config.temperatureSetPointLevelRegister || 206;
   this.temperatureSetPointRegister = config.temperatureSetPointRegister || 207;
   this.supplyAirTemperatureRegister = config.supplyAirTemperatureRegister || 213;
-  this.temperatureScaling = config.temperatureScaling || 0.1;
+  this.temperatureScaling = config.temperatureScaling || 10;
   this.targetTemperatureProperties = config.targetTemperatureProperties || {
     "minValue": 12,
     "maxValue": 22,
@@ -66,7 +66,7 @@ Ventilation.prototype = {
   errorHandling: function(error, callback) {
     this.connected = (this.client.isOpen) ? true : false;
     if (this.connected == false) {
-      this.log("Lost connection to Modbus TCP-server, reconnecting shortly...");
+      this.log("Lost connection to Modbus TCP-server, trying to reconnect shortly...");
     }
     callback(error);
   },
@@ -226,10 +226,11 @@ Ventilation.prototype = {
   getCurrentTemperature: function(callback) {
     this.client.readHoldingRegisters(this.supplyAirTemperatureRegister, 1)
       .then((response) => {
-        if (this.currentTemperature != response.data[0] * this.temperatureScaling) {
-          this.log("Received updated currentTemperature from unit. Changing from %s to %s", this.currentTemperature, response.data[0] * this.temperatureScaling);
+        let receivedCurrentTemperature = response.data[0] / this.temperatureScaling
+        if (this.currentTemperature != receivedCurrentTemperature) {
+          this.log("Received updated currentTemperature from unit. Changing from %s to %s", this.currentTemperature, receivedCurrentTemperature);
         }
-        this.currentTemperature = response.data[0] * this.temperatureScaling;
+        this.currentTemperature = receivedCurrentTemperature;
         callback(null, this.currentTemperature)
       })
       .catch((error) => {
@@ -240,10 +241,11 @@ Ventilation.prototype = {
   getTargetTemperature: function(callback) {
     this.client.readHoldingRegisters(this.temperatureSetPointRegister, 1)
       .then((response) => {
-        if (this.targetTemperature != response.data[0] * this.temperatureScaling) {
-          this.log("Received updated targetTemperature from unit. Changing from %s to %s", this.targetTemperature, response.data[0] * this.temperatureScaling);
+        let receivedTargetTemperature = response.data[0] / this.temperatureScaling
+        if (this.targetTemperature != receivedTargetTemperature) {
+          this.log("Received updated targetTemperature from unit. Changing from %s to %s", this.targetTemperature, receivedTargetTemperature);
         }
-        this.targetTemperature = response.data[0] * this.temperatureScaling;
+        this.targetTemperature = receivedTargetTemperature;
         callback(null, this.targetTemperature)
       })
       .catch((error) => {

@@ -33,7 +33,7 @@ implements a Systemair Villavent VTR300 unit connected via Modbus TCP as a HomeK
     "temperatureSetPointLevelRegister": 206, //Optional. Needs to correspond with the unit's Modbus implementation.
     "temperatureSetPointRegister": 207, //Optional. Needs to correspond with the unit's Modbus implementation.
     "supplyAirTemperatureRegister": 213, //Optional. Needs to correspond with the unit's Modbus implementation.
-    "temperatureScaling": 0.1, //Optional. Needs to correspond with the unit's Modbus implementation.
+    "temperatureScaling": 10, //Optional. Needs to correspond with the unit's Modbus implementation.
     "targetTemperatureProperties": {"minValue": 12, "maxValue": 22, "minStep": 1} //Optional. Needs to correspond with the unit's Modbus implementation.
   }
 ]
