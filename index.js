@@ -279,33 +279,33 @@ Ventilation.prototype = {
     callback(null, this.name);
   },
 
-  connectClient: function() {
-    this.client = new ModbusRTU();
+  runModbus: function() {
+    this.connected ? poll() : connectClient();
+    setTimeout(() => this.runModbus(), this.pollInterval * 1000);
 
-    let connect = function() {
-      this.client.connectTCP(this.host, {
-        port: this.port
-      })
-        .then((response) => {
-          this.client.setID(this.slave);
-          this.connected = true;
-          this.log("Connected to Modbus TCP-server");
+    function connectClient() {
+      this.client = new ModbusRTU();
+  
+      let connect = function() {
+        this.client.connectTCP(this.host, {
+          port: this.port
         })
-        .catch((error) => {
-          this.log(error);
-        })
+          .then((response) => {
+            this.client.setID(this.slave);
+            this.connected = true;
+            this.log("Connected to Modbus TCP-server");
+          })
+          .catch((error) => {
+            this.log(error);
+          })
+      };
+  
+      this.client.close(connect.bind(this));
     };
 
-    this.client.close(connect.bind(this));
-  },
-
-  poll: function() {
-    this.pollCharacteristics.forEach((characteristic) => characteristic.getValue());
-  },
-
-  runModbus: function() {
-    this.connected ? this.poll() : this.connectClient();
-    setTimeout(() => this.runModbus(), this.pollInterval * 1000);
+    function poll() {
+      this.pollCharacteristics.forEach((characteristic) => characteristic.getValue());
+    };
   },
 
   getServices: function() {
