@@ -280,8 +280,8 @@ Ventilation.prototype = {
   },
 
   runModbus: function() {
-    this.connected ? poll() : connectClient();
-    setTimeout(() => this.runModbus(), this.pollInterval * 1000);
+    this.connected ? poll.bind(this)() : connectClient.bind(this)();
+    setTimeout(() => this.runModbus.bind(this)(), this.pollInterval * 1000);
 
     function connectClient() {
       this.client = new ModbusRTU();
