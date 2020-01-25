@@ -1,0 +1,224 @@
+{
+    "pluginAlias": "systemairModbus",
+    "pluginType": "accessory",
+    "singular": false,
+    "headerDisplay": "Register addresses need to correspond with the ventilation unit",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "title": "Name",
+                "type": "string",
+                "default": "Systemair",
+                "required": true
+            },
+            "host": {
+                "title": "IP address",
+                "type": "string",
+                "format": "ipv4",
+                "required": true,
+                "description": "The IP address of the TCP Modbus device"
+            },
+            "port": {
+                "title": "Port",
+                "type": "integer",
+                "required": true,
+                "description": "The port of the TCP Modbus device"
+            },
+            "slave": {
+                "title": "Slave",
+                "type": "integer",
+                "required": true,
+                "description": "The slave ID of the ventilation unit"
+            },
+            "pollInterval": {
+                "title": "Polling Interval",
+                "type": "integer",
+                "required": false,
+                "placeholder": "5",
+                "description": "Number of seconds before polling the unit for values"
+            },
+            "model": {
+                "title": "Ventilation unit model",
+                "type": "string",
+                "required": false,
+                "placeholder": "VTR300",
+                "description": "The model of the ventilation unit"
+            },
+            "serial": {
+                "title": "Ventilation unit serial number",
+                "type": "string",
+                "required": false,
+                "placeholder": "SN1",
+                "description": "The serial number of the ventilation unit"
+            },
+            "temperatureDisplayUnits": {
+                "title": "Temperature display unit",
+                "type": "integer",
+                "required": false,
+                "placeholder": "0",
+                "minLength": 1,
+                "maxLength": 1,
+                "minimum": 0,
+                "maximum": 1,
+                "description": "The temperature display unit (0 for Celsius and 1 for Fahrenheit)"
+            },
+            "temperatureScaling": {
+                "title": "Temperature scaling",
+                "type": "integer",
+                "required": false,
+                "placeholder": "10",
+                "description": "Scaling applied to the unit's temperature registers"
+            },
+            "targetTemperatureProperties": {
+                "title": "Target temperature properties",
+                "type": "object",
+                "required": false,
+                "properties": {
+                    "minValue": {
+                        "title": "Minimum temperature",
+                        "type": "integer",
+                        "default": "12",
+                        "placeholder": "12",
+                        "required": true,
+                        "description": "The minimum temperature the ventilation unit supports"
+                    },
+                    "maxValue": {
+                        "title": "Maximum temperature",
+                        "type": "integer",
+                        "default": "22",
+                        "placeholder": "22",
+                        "required": true,
+                        "description": "The maximum temperature the ventilation unit supports"
+                    },
+                    "minStep": {
+                        "title": "Degree step",
+                        "type": "integer",
+                        "default": "1",
+                        "placeholder": "1",
+                        "required": true,
+                        "description": "The temperature increment of the ventilation unit"
+                    }
+                }
+            },
+            "replacementTimeInMonthsRegister": {
+                "title": "Replacement time in months register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "600",
+                "description": "The register holding the replacement time in months"
+            },
+            "elapsedDaysSinceFilterChangeRegister": {
+                "title": "Elapsed days since filter change register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "601",
+                "description": "The register holding elapsed days since filter change"
+            },
+            "fanSpeedLevelRegister": {
+                "title": "Fan speed level register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "100",
+                "description": "The register holding the fan speed level"
+            },
+            "rotorRelayActiveRegister": {
+                "title": "Rotor relay status register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "351",
+                "description": "The register holding the rotor relay status"
+            },
+            "temperatureSetPointLevelRegister": {
+                "title": "Temperature set point level register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "206",
+                "description": "The register holding the temperature set point level"
+            },
+            "temperatureSetPointRegister": {
+                "title": "Temperature set point register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "207",
+                "description": "The register holding the temperature set point"
+            },
+            "supplyAirTemperatureRegister": {
+                "title": "Suppy air temperature register",
+                "type": "integer",
+                "required": false,
+                "placeholder": "213",
+                "description": "The register holding the suppy air temperature"
+            }
+        }
+    },
+    "layout": [
+        {
+            "key": "name"
+        },
+        {
+            "key": "host"
+        },
+        {
+            "key": "port"
+        },
+        {
+            "key": "slave"
+        },
+        {
+            "type": "section",
+            "title": "Optional parameters",
+            "expandable": true,
+            "expanded": false,
+            "items": [
+                {
+                    "key": "pollInterval"
+                },
+                {
+                    "key": "model"
+                },
+                {
+                    "key": "serial"
+                },
+                {
+                    "key": "temperatureDisplayUnits"
+                },
+                {
+                    "key": "temperatureScaling"
+                },
+                {
+                    "key": "targetTemperatureProperties"
+                },
+                {
+                    "type": "section",
+                    "title": "Registers",
+                    "expandable": true,
+                    "expanded": false,
+                    "items": [
+                        {
+                            "key": "replacementTimeInMonthsRegister"
+                        },
+                        {
+                            "key": "elapsedDaysSinceFilterChangeRegister"
+                        },
+                        {
+                            "key": "fanSpeedLevelRegister"
+                        },
+                        {
+                            "key": "rotorRelayActiveRegister"
+                        },
+                        {
+                            "key": "temperatureSetPointLevelRegister"
+                        },
+                        {
+                            "key": "temperatureSetPointRegister"
+                        },
+                        {
+                            "key": "supplyAirTemperatureRegister"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
