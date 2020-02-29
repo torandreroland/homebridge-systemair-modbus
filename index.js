@@ -291,9 +291,6 @@ Ventilation.prototype = {
           port: this.port
         })
           .then((response) => {
-            if (response.statusCode == 201) {
-              
-            }
             this.client.setID(this.slave);
             this.connected = true;
             this.log("Connected to Modbus TCP-server");
