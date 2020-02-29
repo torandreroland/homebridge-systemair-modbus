@@ -228,7 +228,7 @@ Ventilation.prototype = {
       .then((response) => {
         let receivedCurrentTemperature = response.data[0] / this.temperatureScaling
         if (this.currentTemperature != receivedCurrentTemperature) {
-          this.log("Received updated currentTemperature from unit. Changing from %s to %s", this.currentTemperature, receivedCurrentTemperature);
+          this.log.debug("Received updated currentTemperature from unit. Changing from %s to %s", this.currentTemperature, receivedCurrentTemperature);
         }
         this.currentTemperature = receivedCurrentTemperature;
         callback(null, this.currentTemperature)
@@ -291,6 +291,9 @@ Ventilation.prototype = {
           port: this.port
         })
           .then((response) => {
+            if (response.statusCode == 201) {
+              
+            }
             this.client.setID(this.slave);
             this.connected = true;
             this.log("Connected to Modbus TCP-server");
