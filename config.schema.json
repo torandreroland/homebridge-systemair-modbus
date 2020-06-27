@@ -9,7 +9,7 @@
             "name": {
                 "title": "Name",
                 "type": "string",
-                "default": "Systemair",
+                "default": "Ventilation",
                 "required": true
             },
             "host": {

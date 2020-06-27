@@ -316,14 +316,14 @@ Ventilation.prototype = {
       .setCharacteristic(Characteristic.Model, this.model)
       .setCharacteristic(Characteristic.SerialNumber, this.serial);
 
-    this.filterMaintenanceService = new Service.FilterMaintenance(this.name);
+    this.filterMaintenanceService = new Service.FilterMaintenance(this.name + " Filter");
     this.filterMaintenanceService
       .getCharacteristic(Characteristic.FilterChangeIndication)
       .on('get', this.getFilterChangeIndication.bind(this));
 
-    this.fanService = new Service.Fan(this.name);
+    this.fanService = new Service.Fanv2(this.name + " Fan");
     this.fanService
-      .getCharacteristic(Characteristic.On)
+      .getCharacteristic(Characteristic.Active)
       .on('get', this.getFanOn.bind(this))
       .on('set', this.setFanOn.bind(this));
     this.fanService
@@ -331,7 +331,7 @@ Ventilation.prototype = {
       .on('get', this.getFanRotationSpeed.bind(this))
       .on('set', this.setFanRotationSpeed.bind(this));
 
-    this.ThermostatService = new Service.Thermostat(this.name);
+    this.ThermostatService = new Service.Thermostat(this.name + " Thermostat");
     this.ThermostatService
       .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
       .on('get', this.getCurrentHeatingCoolingState.bind(this));
@@ -359,7 +359,7 @@ Ventilation.prototype = {
       .setProps(this.targetHeatingCoolingStateValidValues);
 
     this.pollCharacteristics.push(this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication));
-    this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.On));
+    this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.Active));
     this.pollCharacteristics.push(this.fanService.getCharacteristic(Characteristic.RotationSpeed));
     this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState));
     this.pollCharacteristics.push(this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState));
