@@ -28,7 +28,7 @@ function Ventilation(log, config) {
   this.rotorRelayActiveRegister = config.rotorRelayActiveRegister || 351;
   this.temperatureSetPointLevelRegister = config.temperatureSetPointLevelRegister || 206;
   this.temperatureSetPointRegister = config.temperatureSetPointRegister || 207;
-  this.supplyAirTemperatureRegister = config.supplyAirTemperatureRegister || 213;
+  this.currentTemperatureRegister = config.currentTemperatureRegister || 217;
   this.temperatureScaling = config.temperatureScaling || 10;
   this.targetTemperatureProperties = config.targetTemperatureProperties || {
     "minValue": 12,
@@ -184,7 +184,7 @@ Ventilation.prototype = {
     this.client.readHoldingRegisters(this.rotorRelayActiveRegister, 1)
       .then((response) => {
         if (response.data[0] != this.currentHeatingCoolingState) {
-          this.log("Received updated currentHeatingCoolingState from unit. Changing from %s to %s", this.currentHeatingCoolingState, response.data[0]);
+          this.log.debug("Received updated currentHeatingCoolingState from unit. Changing from %s to %s", this.currentHeatingCoolingState, response.data[0]);
         }
         this.currentHeatingCoolingState = response.data[0];
         callback(null, this.currentHeatingCoolingState)
@@ -224,7 +224,7 @@ Ventilation.prototype = {
   },
 
   getCurrentTemperature: function(callback) {
-    this.client.readHoldingRegisters(this.supplyAirTemperatureRegister, 1)
+    this.client.readHoldingRegisters(this.currentTemperatureRegister, 1)
       .then((response) => {
         let receivedCurrentTemperature = response.data[0] / this.temperatureScaling
         if (this.currentTemperature != receivedCurrentTemperature) {

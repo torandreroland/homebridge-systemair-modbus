@@ -143,12 +143,12 @@
                 "placeholder": "207",
                 "description": "The register holding the temperature set point"
             },
-            "supplyAirTemperatureRegister": {
-                "title": "Suppy air temperature register",
+            "currentTemperatureRegister": {
+                "title": "Current temperature register",
                 "type": "integer",
                 "required": false,
-                "placeholder": "213",
-                "description": "The register holding the suppy air temperature"
+                "placeholder": "217",
+                "description": "The register holding the current temperature"
             }
         }
     },
@@ -214,7 +214,7 @@
                             "key": "temperatureSetPointRegister"
                         },
                         {
-                            "key": "supplyAirTemperatureRegister"
+                            "key": "currentTemperatureRegister"
                         }
                     ]
                 }
