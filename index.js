@@ -178,6 +178,7 @@ Ventilation.prototype = {
     this.client.writeRegisters(this.fanSpeedLevelRegister, [this.fanLevel])
       .then((response) => {
         this.log("Setting rotationSpeed %s as fanLevel %s.", value, this.fanLevel);
+        this.fanSpeed = value;
         callback();
       })
       .catch((error) => {
@@ -262,8 +263,8 @@ Ventilation.prototype = {
     this.setPoint = value - this.setPointLevelDifference;
     this.client.writeRegisters(this.temperatureSetPointLevelRegister, [this.setPoint])
       .then((response) => {
-        this.targetTemperature = value;
         this.log("Setting targetTemperature %s", value);
+        this.targetTemperature = value;
         callback()
       })
       .catch((error) => {
