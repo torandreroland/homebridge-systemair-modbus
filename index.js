@@ -232,7 +232,11 @@ Ventilation.prototype = {
   getCurrentTemperature: function(callback) {
     this.client.readHoldingRegisters(this.currentTemperatureRegister, 1)
       .then((response) => {
-        let receivedCurrentTemperature = response.data[0] / this.temperatureScaling
+        let receivedData = response.data[0]
+        if (receivedData > 32767) {
+          receivedData = receivedData - 65535;
+        }
+        let receivedCurrentTemperature = receivedData / this.temperatureScaling
         if (this.currentTemperature != receivedCurrentTemperature) {
           this.log.debug("Received updated currentTemperature from unit. Changing from %s to %s.", this.currentTemperature, receivedCurrentTemperature);
         }
@@ -359,6 +363,8 @@ Ventilation.prototype = {
     this.ThermostatService
       .getCharacteristic(Characteristic.Name)
       .on('get', this.getName.bind(this));
+    this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature)
+      .setProps({minValue: -60});
     this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature)
       .setProps(this.targetTemperatureProperties);
     this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState)
