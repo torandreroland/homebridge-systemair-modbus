@@ -64,229 +64,12 @@ Ventilation.prototype = {
     callback();
   },
 
-  errorHandling: function(error, callback) {
+  errorHandling: function(error) {
     this.connected = (this.client.isOpen) ? true : false;
     if (this.connected == false) {
       this.log("Lost connection to Modbus TCP-server, continuously trying to reconnect...");
     }
-    callback(error);
-  },
-
-  getFilterChangeIndication: function(callback) {
-    this.client.readHoldingRegisters(this.replacementTimeInMonthsRegister, 1)
-      .then((responseMonths) => {
-        this.replacementTimeMonths = responseMonths.data[0];
-        this.client.readHoldingRegisters(this.elapsedDaysSinceFilterChangeRegister, 1)
-          .then((responseDays) => {
-            const respondedFilterChangeIndication = (responseDays.data[0] > this.replacementTimeMonths * 30) ? 1 : 0;
-            if (respondedFilterChangeIndication != this.filterChangeIndication) {
-              this.log("Received updated filterChangeIndication from unit. Changing from %s to %s based on number of days passed: %s.", this.filterChangeIndication, respondedFilterChangeIndication, responseDays.data[0]);
-            }
-            if (responseDays.data[0] !== this.elapsedDaysSinceFilterChange) {
-              this.log("It has now been %s day(s) since the filter was replaced.", responseDays.data[0]);
-            }
-            this.filterChangeIndication = respondedFilterChangeIndication;
-            this.elapsedDaysSinceFilterChange = responseDays.data[0];
-            callback(null, this.filterChangeIndication);
-          })
-          .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getFanOn: function(callback) {
-    this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
-      .then((response) => {
-        const respondedFanOn = (response.data[0] == 0) ? false : true;
-        if (respondedFanOn != this.fanOn) {
-          this.log("Received updated fanOn from unit. Changing from %s to %s.", this.fanOn, respondedFanOn);
-        }
-        this.fanOn = respondedFanOn;
-        callback(null, this.fanOn)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  setFanOn: function(value, callback) {
-    const targetFanLevel = (value == true) ? this.fanLevel : 0;
-
-    this.client.writeRegisters(this.fanSpeedLevelRegister, [targetFanLevel])
-      .then((response) => {
-        this.log("Setting fanOn %s and fanLevel %s.", value, targetFanLevel);
-        this.fanOn = value;
-        callback();
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getFanRotationSpeed: function(callback) {
-    this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
-      .then((response) => {
-
-        let respondedFanSpeed;
-        switch (true) {
-          case ( response.data[0] == 0):
-            respondedFanSpeed = 0;
-            break;
-          case ( response.data[0] == 1):
-            respondedFanSpeed = 33;
-            break;
-          case ( response.data[0] == 2):
-            respondedFanSpeed = 67;
-            break;
-          default:
-            respondedFanSpeed = 100;
-            break;
-        }
-
-        if (respondedFanSpeed != this.fanSpeed) {
-          this.log("Received updated rotationSpeed from unit. Changing from %s to %s.", this.fanSpeed, respondedFanSpeed);
-        }
-        this.fanSpeed = respondedFanSpeed
-        callback(null, this.fanSpeed)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  setFanRotationSpeed: function(value, callback) {
-
-    switch (true) {
-      case ( value == 0):
-        this.fanLevel = 0;
-        break;
-      case ( value < 34):
-        this.fanLevel = 1;
-        break;
-      case ( value < 68):
-        this.fanLevel = 2;
-        break;
-      default:
-        this.fanLevel = 3;
-        break;
-    }
-
-    this.client.writeRegisters(this.fanSpeedLevelRegister, [this.fanLevel])
-      .then((response) => {
-        this.log("Setting rotationSpeed %s as fanLevel %s.", value, this.fanLevel);
-        this.fanSpeed = value;
-        callback();
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getCurrentHeatingCoolingState: function(callback) {
-    this.client.readHoldingRegisters(this.rotorRelayActiveRegister, 1)
-      .then((response) => {
-        if (response.data[0] != this.currentHeatingCoolingState) {
-          this.log.debug("Received updated currentHeatingCoolingState from unit. Changing from %s to %s.", this.currentHeatingCoolingState, response.data[0]);
-        }
-        this.currentHeatingCoolingState = response.data[0];
-        callback(null, this.currentHeatingCoolingState)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getTargetHeatingCoolingState: function(callback) {
-    this.client.readHoldingRegisters(this.temperatureSetPointLevelRegister, 1)
-      .then((response) => {
-        const respondedtargetHeatingCoolingState = (response.data[0] == 0) ? 0 : 1;
-        if (respondedtargetHeatingCoolingState != this.targetHeatingCoolingState) {
-          this.log("Received updated targetHeatingCoolingState from unit. Changing from %s to %s.", this.targetHeatingCoolingState, respondedtargetHeatingCoolingState);
-        }
-        this.targetHeatingCoolingState = respondedtargetHeatingCoolingState
-        callback(null, this.targetHeatingCoolingState)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  setTargetHeatingCoolingState: function(value, callback) {
-    const targetHeatingTemperature = (value == 0) ? value : this.setPoint;
-
-    this.client.writeRegisters(this.temperatureSetPointLevelRegister, [targetHeatingTemperature])
-      .then((response) => {
-        this.targetHeatingCoolingState = value;
-        this.log("Setting targetHeatingCoolingState %s.", this.targetHeatingCoolingState);
-        callback();
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getCurrentTemperature: function(callback) {
-    this.client.readHoldingRegisters(this.currentTemperatureRegister, 1)
-      .then((response) => {
-        let receivedData = response.data[0]
-        if (receivedData > 32767) {
-          receivedData = receivedData - 65535;
-        }
-        let receivedCurrentTemperature = receivedData / this.temperatureScaling
-        if (this.currentTemperature != receivedCurrentTemperature) {
-          this.log.debug("Received updated currentTemperature from unit. Changing from %s to %s.", this.currentTemperature, receivedCurrentTemperature);
-        }
-        this.currentTemperature = receivedCurrentTemperature;
-        callback(null, this.currentTemperature)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getTargetTemperature: function(callback) {
-    this.client.readHoldingRegisters(this.temperatureSetPointRegister, 1)
-      .then((response) => {
-        let receivedTargetTemperature = response.data[0] / this.temperatureScaling
-        if (this.targetTemperature != receivedTargetTemperature) {
-          this.log("Received updated targetTemperature from unit. Changing from %s to %s.", this.targetTemperature, receivedTargetTemperature);
-        }
-        this.targetTemperature = receivedTargetTemperature;
-        callback(null, this.targetTemperature)
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  setTargetTemperature: function(value, callback) {
-    this.setPoint = value - this.setPointLevelDifference;
-    this.client.writeRegisters(this.temperatureSetPointLevelRegister, [this.setPoint])
-      .then((response) => {
-        this.log("Setting targetTemperature %s", value);
-        this.targetTemperature = value;
-        callback()
-      })
-      .catch((error) => {
-            this.errorHandling(error, callback);
-          })
-  },
-
-  getTemperatureDisplayUnits: function(callback) {
-    callback(null, this.temperatureDisplayUnits);
-  },
-
-  setTemperatureDisplayUnits: function(value, callback) {
-    this.temperatureDisplayUnits = value;
-    callback();
-  },
-
-  getName: function(callback) {
-    callback(null, this.name);
+    return error;
   },
 
   runModbus: function() {
@@ -319,7 +102,6 @@ Ventilation.prototype = {
   },
 
   getServices: function() {
-
     this.informationService = new Service.AccessoryInformation();
     this.informationService
       .setCharacteristic(Characteristic.Manufacturer, this.manufacturer)
@@ -329,40 +111,254 @@ Ventilation.prototype = {
     this.filterMaintenanceService = new Service.FilterMaintenance(this.name + " Filter");
     this.filterMaintenanceService
       .getCharacteristic(Characteristic.FilterChangeIndication)
-      .on('get', this.getFilterChangeIndication.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let responseMonths = await this.client.readHoldingRegisters(this.replacementTimeInMonthsRegister, 1)
+            let responseDays = await this.client.readHoldingRegisters(this.elapsedDaysSinceFilterChangeRegister, 1)
 
+            const respondedFilterChangeIndication = (responseDays.data[0] > this.replacementTimeMonths * 30) ? 1 : 0;
+            if (respondedFilterChangeIndication != this.filterChangeIndication) {
+              this.log("Received updated filterChangeIndication from unit. Changing from %s to %s based on number of days passed: %s.", this.filterChangeIndication, respondedFilterChangeIndication, responseDays.data[0]);
+            }
+            if (responseDays.data[0] !== this.elapsedDaysSinceFilterChange) {
+              this.log("It has now been %s day(s) since the filter was replaced.", responseDays.data[0]);
+            }
+            this.filterChangeIndication = respondedFilterChangeIndication;
+            this.elapsedDaysSinceFilterChange = responseDays.data[0];
+            return this.filterChangeIndication;  
+          }catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
+    
     this.fanService = new Service.Fanv2(this.name + " Fan");
     this.fanService
       .getCharacteristic(Characteristic.Active)
-      .on('get', this.getFanOn.bind(this))
-      .on('set', this.setFanOn.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
+
+            const respondedFanOn = (response.data[0] == 0) ? false : true;
+            if (respondedFanOn != this.fanOn) {
+              this.log("Received updated fanOn from unit. Changing from %s to %s.", this.fanOn, respondedFanOn);
+            }
+            this.fanOn = respondedFanOn;
+            return this.fanOn;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
+      .onSet(
+        async (value) => {
+          try {
+            const targetFanLevel = (value == true) ? this.fanLevel : 0;
+            let response = await this.client.writeRegisters(this.fanSpeedLevelRegister, [targetFanLevel])
+
+            this.log("Setting fanOn %s and fanLevel %s.", value, targetFanLevel);
+            this.fanOn = value;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
     this.fanService
       .addCharacteristic(Characteristic.RotationSpeed)
-      .on('get', this.getFanRotationSpeed.bind(this))
-      .on('set', this.setFanRotationSpeed.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.fanSpeedLevelRegister, 1)
+
+            let respondedFanSpeed;
+            switch (true) {
+              case ( response.data[0] == 0):
+                respondedFanSpeed = 0;
+                break;
+              case ( response.data[0] == 1):
+                respondedFanSpeed = 33;
+                break;
+              case ( response.data[0] == 2):
+                respondedFanSpeed = 67;
+                break;
+              default:
+                respondedFanSpeed = 100;
+                break;
+            }
+    
+            if (respondedFanSpeed != this.fanSpeed) {
+              this.log("Received updated rotationSpeed from unit. Changing from %s to %s.", this.fanSpeed, respondedFanSpeed);
+            }
+            this.fanSpeed = respondedFanSpeed
+            return this.fanSpeed;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
+      .onSet(
+        async (value) => {
+          try {
+            switch (true) {
+              case ( value == 0):
+                this.fanLevel = 0;
+                break;
+              case ( value < 34):
+                this.fanLevel = 1;
+                break;
+              case ( value < 68):
+                this.fanLevel = 2;
+                break;
+              default:
+                this.fanLevel = 3;
+                break;
+            }
+        
+            let response = await this.client.writeRegisters(this.fanSpeedLevelRegister, [this.fanLevel])
+
+            this.log("Setting rotationSpeed %s as fanLevel %s.", value, this.fanLevel);
+            this.fanSpeed = value;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
 
     this.ThermostatService = new Service.Thermostat(this.name + " Thermostat");
     this.ThermostatService
       .getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-      .on('get', this.getCurrentHeatingCoolingState.bind(this));
+      .onGet (
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.rotorRelayActiveRegister, 1)
+
+            if (response.data[0] != this.currentHeatingCoolingState) {
+              this.log.debug("Received updated currentHeatingCoolingState from unit. Changing from %s to %s.", this.currentHeatingCoolingState, response.data[0]);
+            }
+            this.currentHeatingCoolingState = response.data[0];
+            return this.currentHeatingCoolingState;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
     this.ThermostatService
       .getCharacteristic(Characteristic.TargetHeatingCoolingState)
-      .on('get', this.getTargetHeatingCoolingState.bind(this))
-      .on('set', this.setTargetHeatingCoolingState.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.temperatureSetPointLevelRegister, 1)
+
+            const respondedtargetHeatingCoolingState = (response.data[0] == 0) ? 0 : 1;
+            if (respondedtargetHeatingCoolingState != this.targetHeatingCoolingState) {
+              this.log("Received updated targetHeatingCoolingState from unit. Changing from %s to %s.", this.targetHeatingCoolingState, respondedtargetHeatingCoolingState);
+            }
+            this.targetHeatingCoolingState = respondedtargetHeatingCoolingState
+            return this.targetHeatingCoolingState;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
+      .onSet(
+        async (value) => {
+          try {
+            const targetHeatingTemperature = (value == 0) ? value : this.setPoint;
+
+            let response = await this.client.writeRegisters(this.temperatureSetPointLevelRegister, [targetHeatingTemperature])
+
+            this.targetHeatingCoolingState = value;
+            this.log("Setting targetHeatingCoolingState %s.", this.targetHeatingCoolingState);
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
     this.ThermostatService
       .getCharacteristic(Characteristic.CurrentTemperature)
-      .on('get', this.getCurrentTemperature.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.currentTemperatureRegister, 1)
+
+            let receivedData = response.data[0]
+            if (receivedData > 32767) {
+              receivedData = receivedData - 65535;
+            }
+            let receivedCurrentTemperature = receivedData / this.temperatureScaling
+            if (this.currentTemperature != receivedCurrentTemperature) {
+              this.log.debug("Received updated currentTemperature from unit. Changing from %s to %s.", this.currentTemperature, receivedCurrentTemperature);
+            }
+            this.currentTemperature = receivedCurrentTemperature;
+            return this.currentTemperature;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
     this.ThermostatService
       .getCharacteristic(Characteristic.TargetTemperature)
-      .on('get', this.getTargetTemperature.bind(this))
-      .on('set', this.setTargetTemperature.bind(this));
+      .onGet(
+        async () => {
+          try {
+            let response = await this.client.readHoldingRegisters(this.temperatureSetPointRegister, 1)
+
+            let receivedTargetTemperature = response.data[0] / this.temperatureScaling
+            if (this.targetTemperature != receivedTargetTemperature) {
+              this.log("Received updated targetTemperature from unit. Changing from %s to %s.", this.targetTemperature, receivedTargetTemperature);
+            }
+            this.targetTemperature = receivedTargetTemperature;
+            return this.targetTemperature;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
+      .onSet(
+        async (value) => {
+          try {
+            this.setPoint = value - this.setPointLevelDifference;
+
+            let response = await this.client.writeRegisters(this.temperatureSetPointLevelRegister, [this.setPoint])
+
+            this.log("Setting targetTemperature %s", value);
+            this.targetTemperature = value;
+          }
+          catch(error) {
+            this.errorHandling(error);
+          }
+        }
+      )
     this.ThermostatService
       .getCharacteristic(Characteristic.TemperatureDisplayUnits)
-      .on('get', this.getTemperatureDisplayUnits.bind(this))
-      .on('set', this.setTemperatureDisplayUnits.bind(this));
+      .onGet(
+        async () => {
+          return this.temperatureDisplayUnits;
+        }
+      )
+      .onSet(
+        async (value) => {
+          this.temperatureDisplayUnits = value;
+        }
+      )
     this.ThermostatService
       .getCharacteristic(Characteristic.Name)
-      .on('get', this.getName.bind(this));
+      .onGet(
+        async () => {
+          return this.name;
+        }
+      )
     this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature)
       .setProps({minValue: -60});
     this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature)
