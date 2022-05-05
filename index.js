@@ -93,7 +93,9 @@ Ventilation.prototype = {
           })
           .catch((error) => {
             if (error.errno  == "ECONNREFUSED") {
-              this.log.error("Error connecting to the server.")
+              this.log.error("Host %s:%s refused connection.", this.host, this.port)
+            } else if (error.errno  == -113) {
+              this.log.error("Host %s:%s is unreachable.", this.host, this.port)
             } else {
               this.log.error(error);
             }
