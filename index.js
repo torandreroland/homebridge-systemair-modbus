@@ -64,12 +64,14 @@ Ventilation.prototype = {
     callback();
   },
 
-  errorHandling: function(error) {
+  errorHandling: function(error, service, characteristic, cachedValue) {
     this.connected = (this.client.isOpen) ? true : false;
     if (this.connected == false) {
-      this.log("Lost connection to Modbus TCP-server, continuously trying to reconnect...");
+      this.log.error("Lost connection to Modbus TCP-server, continuously trying to reconnect...");
     }
-    return error;
+    if (error.errno  == "ETIMEDOUT") {
+      this.log.debug("Timed out when fetching characteristic '%s' for service '%s'. Using cached value %s.", characteristic.displayName, service.displayName, cachedValue)
+    }
   },
 
   runModbus: function() {
@@ -85,11 +87,16 @@ Ventilation.prototype = {
         })
           .then((response) => {
             this.client.setID(this.slave);
+            this.client.setTimeout(2500);
             this.connected = true;
             this.log("Connected to Modbus TCP-server.");
           })
           .catch((error) => {
-            this.log(error);
+            if (error.errno  == "ECONNREFUSED") {
+              this.log.error("Error connecting to the server.")
+            } else {
+              this.log.error(error);
+            }
           })
       };
   
@@ -126,9 +133,11 @@ Ventilation.prototype = {
             }
             this.filterChangeIndication = respondedFilterChangeIndication;
             this.elapsedDaysSinceFilterChange = responseDays.data[0];
-            return this.filterChangeIndication;  
-          }catch(error) {
-            this.errorHandling(error);
+            return this.filterChangeIndication;
+          }
+          catch(error) {
+            this.errorHandling(error, this.filterMaintenanceService, this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication), this.filterChangeIndication);
+            return this.filterChangeIndication;
           }
         }
       )
@@ -149,21 +158,22 @@ Ventilation.prototype = {
             return this.fanOn;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);
+            return this.fanOn;
           }
         }
       )
       .onSet(
         async (value) => {
+          const targetFanLevel = (value == true) ? this.fanLevel : 0;
+          this.log("Setting fanOn %s and fanLevel %s.", value, targetFanLevel);
           try {
-            const targetFanLevel = (value == true) ? this.fanLevel : 0;
             let response = await this.client.writeRegisters(this.fanSpeedLevelRegister, [targetFanLevel])
 
-            this.log("Setting fanOn %s and fanLevel %s.", value, targetFanLevel);
             this.fanOn = value;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);;
           }
         }
       )
@@ -197,35 +207,35 @@ Ventilation.prototype = {
             return this.fanSpeed;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
+            return this.fanSpeed;
           }
         }
       )
       .onSet(
         async (value) => {
-          try {
-            switch (true) {
-              case ( value == 0):
-                this.fanLevel = 0;
-                break;
-              case ( value < 34):
-                this.fanLevel = 1;
-                break;
-              case ( value < 68):
-                this.fanLevel = 2;
-                break;
-              default:
-                this.fanLevel = 3;
-                break;
-            }
-        
+          switch (true) {
+            case ( value == 0):
+              this.fanLevel = 0;
+              break;
+            case ( value < 34):
+              this.fanLevel = 1;
+              break;
+            case ( value < 68):
+              this.fanLevel = 2;
+              break;
+            default:
+              this.fanLevel = 3;
+              break;
+          }
+          this.log("Setting rotationSpeed %s as fanLevel %s.", value, this.fanLevel);
+          try {       
             let response = await this.client.writeRegisters(this.fanSpeedLevelRegister, [this.fanLevel])
 
-            this.log("Setting rotationSpeed %s as fanLevel %s.", value, this.fanLevel);
             this.fanSpeed = value;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
           }
         }
       )
@@ -245,7 +255,8 @@ Ventilation.prototype = {
             return this.currentHeatingCoolingState;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState), this.currentHeatingCoolingState);
+            return this.currentHeatingCoolingState;
           }
         }
       )
@@ -264,22 +275,22 @@ Ventilation.prototype = {
             return this.targetHeatingCoolingState;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
+            return this.targetHeatingCoolingState;
           }
         }
       )
       .onSet(
         async (value) => {
+          const targetHeatingTemperature = (value == 0) ? value : this.setPoint;
+          this.log("Setting targetHeatingCoolingState %s.", this.targetHeatingCoolingState);
           try {
-            const targetHeatingTemperature = (value == 0) ? value : this.setPoint;
-
             let response = await this.client.writeRegisters(this.temperatureSetPointLevelRegister, [targetHeatingTemperature])
 
             this.targetHeatingCoolingState = value;
-            this.log("Setting targetHeatingCoolingState %s.", this.targetHeatingCoolingState);
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
           }
         }
       )
@@ -302,7 +313,8 @@ Ventilation.prototype = {
             return this.currentTemperature;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature), this.currentTemperature);
+            return this.currentTemperature;
           }
         }
       )
@@ -321,22 +333,22 @@ Ventilation.prototype = {
             return this.targetTemperature;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
+            return this.targetTemperature;
           }
         }
       )
       .onSet(
         async (value) => {
+          this.setPoint = value - this.setPointLevelDifference;
+          this.log("Setting targetTemperature %s", value);
           try {
-            this.setPoint = value - this.setPointLevelDifference;
-
             let response = await this.client.writeRegisters(this.temperatureSetPointLevelRegister, [this.setPoint])
 
-            this.log("Setting targetTemperature %s", value);
             this.targetTemperature = value;
           }
           catch(error) {
-            this.errorHandling(error);
+            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
           }
         }
       )
