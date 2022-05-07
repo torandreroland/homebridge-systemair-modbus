@@ -1,10 +1,11 @@
-var Service,
-  Characteristic;
+var Service, Characteristic, HapStatusError, HAPStatus;
 var ModbusRTU = require("modbus-serial");
 
 module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
+  HapStatusError = homebridge.hap.HapStatusError;
+  HAPStatus = homebridge.hap.HAPStatus;
   homebridge.registerAccessory("homebridge-systemair-modbus", "systemairModbus", Ventilation);
 };
 
@@ -64,7 +65,7 @@ Ventilation.prototype = {
     callback();
   },
 
-  errorHandling: function(error, service, characteristic, cachedValue) {
+  errorLogging: function(error, service, characteristic, cachedValue) {
     this.connected = (this.client.isOpen) ? true : false;
     if (this.connected == false) {
       this.log.error("Lost connection to Modbus TCP-server, continuously trying to reconnect...");
@@ -138,7 +139,10 @@ Ventilation.prototype = {
             return this.filterChangeIndication;
           }
           catch(error) {
-            this.errorHandling(error, this.filterMaintenanceService, this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication), this.filterChangeIndication);
+            this.errorLogging(error, this.filterMaintenanceService, this.filterMaintenanceService.getCharacteristic(Characteristic.FilterChangeIndication), this.filterChangeIndication);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.filterChangeIndication;
           }
         }
@@ -160,7 +164,10 @@ Ventilation.prototype = {
             return this.fanOn;
           }
           catch(error) {
-            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);
+            this.errorLogging(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.fanOn;
           }
         }
@@ -175,7 +182,10 @@ Ventilation.prototype = {
             this.fanOn = value;
           }
           catch(error) {
-            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);;
+            this.errorLogging(error, this.fanService, this.fanService.getCharacteristic(Characteristic.Active), this.fanOn);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
           }
         }
       )
@@ -209,7 +219,10 @@ Ventilation.prototype = {
             return this.fanSpeed;
           }
           catch(error) {
-            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
+            this.errorLogging(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.fanSpeed;
           }
         }
@@ -237,7 +250,10 @@ Ventilation.prototype = {
             this.fanSpeed = value;
           }
           catch(error) {
-            this.errorHandling(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
+            this.errorLogging(error, this.fanService, this.fanService.getCharacteristic(Characteristic.RotationSpeed), this.fanSpeed);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
           }
         }
       )
@@ -257,7 +273,10 @@ Ventilation.prototype = {
             return this.currentHeatingCoolingState;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState), this.currentHeatingCoolingState);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentHeatingCoolingState), this.currentHeatingCoolingState);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.currentHeatingCoolingState;
           }
         }
@@ -277,7 +296,10 @@ Ventilation.prototype = {
             return this.targetHeatingCoolingState;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.targetHeatingCoolingState;
           }
         }
@@ -292,7 +314,10 @@ Ventilation.prototype = {
             this.targetHeatingCoolingState = value;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetHeatingCoolingState), this.targetHeatingCoolingState);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
           }
         }
       )
@@ -315,7 +340,10 @@ Ventilation.prototype = {
             return this.currentTemperature;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature), this.currentTemperature);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.CurrentTemperature), this.currentTemperature);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.currentTemperature;
           }
         }
@@ -335,7 +363,10 @@ Ventilation.prototype = {
             return this.targetTemperature;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
             return this.targetTemperature;
           }
         }
@@ -350,7 +381,10 @@ Ventilation.prototype = {
             this.targetTemperature = value;
           }
           catch(error) {
-            this.errorHandling(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
+            this.errorLogging(error, this.ThermostatService, this.ThermostatService.getCharacteristic(Characteristic.TargetTemperature), this.targetTemperature);
+            if (this.connected == false) {
+              throw new HapStatusError(HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            }
           }
         }
       )
