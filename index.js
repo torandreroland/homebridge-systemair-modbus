@@ -41,6 +41,7 @@ function Ventilation(log, config) {
   };
 
   this.connected = false;
+  this.logConnectionError = true;
   this.pollCharacteristics = [];
 
   this.filterChangeIndication = 0;
@@ -93,12 +94,16 @@ Ventilation.prototype = {
             this.log("Connected to Modbus TCP-server.");
           })
           .catch((error) => {
-            if (error.errno  == "ECONNREFUSED") {
-              this.log.error("Host %s:%s refused connection.", this.host, this.port)
-            } else if (error.errno  == -113) {
-              this.log.error("Host %s:%s is unreachable.", this.host, this.port)
-            } else {
-              this.log.error(error);
+            if (this.logConnectionError == true) {
+              setTimeout(() => {this.logConnectionError = true;}, 600000)
+              if (error.errno  == "ECONNREFUSED") {
+                this.log.error("Host %s:%s refused connection.", this.host, this.port)
+              } else if (error.errno  == -113) {
+                this.log.error("Host %s:%s is unreachable.", this.host, this.port)
+              } else {
+                this.log.error(error);
+              }
+              this.logConnectionError = false;
             }
           })
       };
