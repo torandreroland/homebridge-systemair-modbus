@@ -42,6 +42,7 @@ function Ventilation(log, config) {
 
   this.connected = false;
   this.logConnectionError = true;
+  this.timeoutId = null;
   this.pollCharacteristics = [];
 
   this.filterChangeIndication = 0;
@@ -91,11 +92,15 @@ Ventilation.prototype = {
             this.client.setID(this.slave);
             this.client.setTimeout(2500);
             this.connected = true;
+            if (this.timeoutId !== null) {
+              clearTimeout(this.timeoutId);
+              this.timeoutId = null;
+            }
+            this.logConnectionError = true;
             this.log("Connected to Modbus TCP-server.");
           })
           .catch((error) => {
             if (this.logConnectionError == true) {
-              setTimeout(() => {this.logConnectionError = true;}, 600000)
               if (error.errno  == "ECONNREFUSED") {
                 this.log.error("Host %s:%s refused connection.", this.host, this.port)
               } else if (error.errno  == -113) {
@@ -104,6 +109,7 @@ Ventilation.prototype = {
                 this.log.error(error);
               }
               this.logConnectionError = false;
+              this.timeoutId = setTimeout(() => {this.logConnectionError = true;}, 600000);
             }
           })
       };
