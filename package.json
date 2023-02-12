@@ -1,6 +1,6 @@
 {
   "name": "homebridge-systemair-modbus",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "description": "Homebridge plugin to control Systemair Ventilation through ModbusTCP",
   "main": "index.js",
   "repository": {
