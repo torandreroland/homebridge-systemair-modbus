@@ -138,7 +138,7 @@ Ventilation.prototype = {
             let responseMonths = await this.client.readHoldingRegisters(this.replacementTimeInMonthsRegister, 1)
             let responseDays = await this.client.readHoldingRegisters(this.elapsedDaysSinceFilterChangeRegister, 1)
 
-            const respondedFilterChangeIndication = (responseDays.data[0] > this.replacementTimeMonths * 30) ? 1 : 0;
+            const respondedFilterChangeIndication = (responseDays.data[0] > responseMonths.data[0] * 30) ? 1 : 0;
             if (respondedFilterChangeIndication != this.filterChangeIndication) {
               this.log("Received updated filterChangeIndication from unit. Changing from %s to %s based on number of days passed: %s.", this.filterChangeIndication, respondedFilterChangeIndication, responseDays.data[0]);
             }
