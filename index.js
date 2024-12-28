@@ -118,7 +118,7 @@ Ventilation.prototype = {
     };
 
     function poll() {
-      this.pollCharacteristics.forEach((characteristic) => characteristic.getValue());
+      this.pollCharacteristics.forEach((characteristic) => characteristic.value);
     };
   },
 
